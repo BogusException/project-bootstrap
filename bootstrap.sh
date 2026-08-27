@@ -21,6 +21,41 @@ log()  { printf "${GREEN}[bootstrap]${NC} %s\n" "$*"; }
 warn() { printf "${YELLOW}[bootstrap]${NC} %s\n" "$*"; }
 err()  { printf "${RED}[bootstrap]${NC} %s\n" "$*" >&2; }
 
+# ─── Help ─────────────────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "--usage" ]]; then
+    cat <<'EOF'
+
+project-bootstrap — scaffold a complete Claude Code Python project
+
+USAGE
+  mkdir ~/Projects/<name>
+  cd    ~/Projects/<name>
+  proj
+
+WHAT IT DOES (9 phases)
+  1. Preflight      — safety checks (refuses live projects, handles bare-repo collisions)
+  2. Git            — init local repo + bare repo in ~/Repositories/<name>.git
+  3. Python         — creates .venv, installs requirements.txt
+  4. Root files     — copies templates: README, .gitignore, .env.example, run.sh, test.sh, etc.
+  5. Claude config  — writes .claude/settings.json, hooks (save-response, auto-commit, marketplace)
+  6. Structure      — creates src/<name>/, tests/, docs/, tasks/, responses/
+  7. Global setup   — adds auto-venv cd override to ~/.bashrc (idempotent)
+  8. Initial commit — "Initial project scaffold" commit to bare repo
+  9. Verify         — prints summary and next steps
+
+PREREQUISITES
+  ~/bin/proj must exist (run: bash ~/Projects/project-bootstrap/install.sh)
+  ~/bin must be on PATH
+
+NOTES
+  Re-running is safe — every step is guarded by an existence check.
+  bootstrap.sh lives in ~/Projects/project-bootstrap; proj calls it directly.
+  Edit templates/ or bootstrap.sh to change what new projects look like.
+
+EOF
+    exit 0
+fi
+
 # ─── Screen ───────────────────────────────────────────────────────────────────
 if [[ -z "${STY:-}" ]]; then
     log "Starting screen session: $PROJECT_NAME"
