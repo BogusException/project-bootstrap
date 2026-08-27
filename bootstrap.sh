@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # bootstrap.sh — project-bootstrap
-# Run from an empty project directory to scaffold a complete Claude Code project.
-# Usage: cd ~/Projects/myproject && mkproj
+# Usage: cd ~/Projects && mkproj <name>
 set -euo pipefail
 
 BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,10 +8,6 @@ TEMPLATES_DIR="$BOOTSTRAP_DIR/templates"
 MARKETPLACE_HOOKS="$HOME/.claude/plugins/marketplaces/dotclaude/hooks"
 MARKETPLACE_RULES="$HOME/.claude/plugins/marketplaces/dotclaude/rules"
 REPOS_DIR="$HOME/Repositories"
-
-PROJECT_DIR="$PWD"
-PROJECT_NAME="$(basename "$PROJECT_DIR")"
-BARE_REPO="$REPOS_DIR/$PROJECT_NAME.git"
 BARE_REPO_KEEP=false
 
 # ─── Colours ──────────────────────────────────────────────────────────────────
@@ -28,9 +23,13 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "--usage" ]]; then
 project-bootstrap — scaffold a complete Claude Code Python project
 
 USAGE
-  mkdir ~/Projects/<name>
-  cd    ~/Projects/<name>
-  mkproj
+  cd ~/Projects
+  mkproj <name>
+
+NAME RULES
+  Allowed : a-z  0-9  _  -  (lowercase only)
+  Rejected: spaces, uppercase, special characters
+  Examples: mkproj my-tool   mkproj cambium_temp   mkproj agent2
 
 WHAT IT DOES (9 phases)
   1. Preflight      — safety checks (refuses live projects, handles bare-repo collisions)
@@ -55,6 +54,40 @@ NOTES
 EOF
     exit 0
 fi
+
+# ─── Name validation ──────────────────────────────────────────────────────────
+validate_name() {
+    local name="$1"
+    if [[ ! "$name" =~ ^[a-z0-9_-]+$ ]]; then
+        err "Invalid project name: '$name'"
+        err ""
+        err "Allowed characters: a-z  0-9  _  -  (lowercase only)"
+        err "No spaces, uppercase letters, or special characters."
+        err ""
+        err "Valid examples:"
+        err "  mkproj my-tool"
+        err "  mkproj cambium_temp"
+        err "  mkproj agent2024"
+        exit 1
+    fi
+}
+
+# ─── Project directory ────────────────────────────────────────────────────────
+if [[ -n "${1:-}" ]]; then
+    validate_name "$1"
+    PROJECT_NAME="$1"
+    PROJECT_DIR="$PWD/$PROJECT_NAME"
+    if [[ ! -d "$PROJECT_DIR" ]]; then
+        mkdir "$PROJECT_DIR"
+        log "Created $PROJECT_DIR"
+    fi
+else
+    PROJECT_DIR="$PWD"
+    PROJECT_NAME="$(basename "$PROJECT_DIR")"
+    validate_name "$PROJECT_NAME"
+fi
+
+BARE_REPO="$REPOS_DIR/$PROJECT_NAME.git"
 
 # ─── Screen ───────────────────────────────────────────────────────────────────
 if [[ -z "${STY:-}" ]]; then
