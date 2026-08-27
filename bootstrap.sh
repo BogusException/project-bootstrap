@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bootstrap.sh — project-bootstrap
 # Run from an empty project directory to scaffold a complete Claude Code project.
-# Usage: cd ~/Projects/myproject && proj
+# Usage: cd ~/Projects/myproject && mkproj
 set -euo pipefail
 
 BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +30,7 @@ project-bootstrap — scaffold a complete Claude Code Python project
 USAGE
   mkdir ~/Projects/<name>
   cd    ~/Projects/<name>
-  proj
+  mkproj
 
 WHAT IT DOES (9 phases)
   1. Preflight      — safety checks (refuses live projects, handles bare-repo collisions)
@@ -44,12 +44,12 @@ WHAT IT DOES (9 phases)
   9. Verify         — prints summary and next steps
 
 PREREQUISITES
-  ~/bin/proj must exist (run: bash ~/Projects/project-bootstrap/install.sh)
-  ~/bin must be on PATH
+  ~/bin/mkproj must exist (run: bash ~/Projects/project-bootstrap/install.sh)
+  ~/bin must be on PATH (ahead of /usr/bin to avoid conflicts)
 
 NOTES
   Re-running is safe — every step is guarded by an existence check.
-  bootstrap.sh lives in ~/Projects/project-bootstrap; proj calls it directly.
+  bootstrap.sh lives in ~/Projects/project-bootstrap; mkproj calls it directly.
   Edit templates/ or bootstrap.sh to change what new projects look like.
 
 EOF

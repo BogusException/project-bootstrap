@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
-# install.sh — one-time setup: creates ~/bin/proj pointing to this bootstrap.
+# install.sh — one-time setup: creates ~/bin/mkproj pointing to this bootstrap.
 # Run once after cloning project-bootstrap to a new machine.
 set -euo pipefail
 
 BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="$HOME/bin"
-LAUNCHER="$BIN_DIR/proj"
+LAUNCHER="$BIN_DIR/mkproj"
 
 mkdir -p "$BIN_DIR"
+
+# Remove old conflicting launcher if present
+if [[ -f "$BIN_DIR/proj" ]]; then
+    rm "$BIN_DIR/proj"
+    echo "Removed stale ~/bin/proj (conflicts with system proj)"
+fi
 
 cat > "$LAUNCHER" <<EOF
 #!/usr/bin/env bash
@@ -26,5 +32,5 @@ if ! echo "$PATH" | tr ':' '\n' | grep -qx "$BIN_DIR"; then
     echo ""
     echo "  export PATH=\"\$HOME/bin:\$PATH\""
 else
-    echo "~/bin is in PATH. You can now run: proj"
+    echo "~/bin is in PATH. You can now run: mkproj"
 fi
