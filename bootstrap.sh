@@ -432,7 +432,7 @@ phase6_structure() {
     copy_template "tasks/todo.md"            "tasks/todo.md"
     copy_template "tasks/skills-manifest.md" "tasks/skills-manifest.md"
 
-    for doc in install running api-keys architecture customizing adding-agents privacy-and-security troubleshooting; do
+    for doc in install running api-keys architecture customizing adding-agents privacy-and-security troubleshooting doc-index; do
         copy_template "docs/$doc.md" "docs/$doc.md"
     done
 
