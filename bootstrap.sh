@@ -9,6 +9,7 @@ MARKETPLACE_HOOKS="$HOME/.claude/plugins/marketplaces/dotclaude/hooks"
 MARKETPLACE_RULES="$HOME/.claude/plugins/marketplaces/dotclaude/rules"
 REPOS_DIR="$HOME/Repositories"
 BARE_REPO_KEEP=false
+TEST_MODE=false
 
 # ─── Colours ──────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -24,7 +25,10 @@ project-bootstrap — scaffold a complete Claude Code Python project
 
 USAGE
   cd ~/Projects
-  mkproj <name>
+  mkproj <name>          create and bootstrap ~/Projects/<name>
+  mkproj                 bootstrap current directory
+  mkproj --test          dry run in /tmp — all 9 phases, then validate and clean up
+  mkproj --help          show this message
 
 NAME RULES
   Allowed : a-z  0-9  _  -  (lowercase only)
@@ -42,6 +46,16 @@ WHAT IT DOES (9 phases)
   8. Initial commit — "Initial project scaffold" commit to bare repo
   9. Verify         — prints summary and next steps
 
+--test MODE
+  Runs all 9 phases against a temp directory (/tmp/mkproj-test-<PID>).
+  All prompts are auto-answered. No screen session is started, so all output
+  is visible directly. After phase 9, a validation pass checks every expected
+  file, hook, and directory. Prints PASS or FAIL with details. Cleans up on
+  exit (both project dir and bare repo).
+
+  Intended to be run from inside Claude Code so errors are visible and fixable
+  without leaving the session.
+
 PREREQUISITES
   ~/bin/mkproj must exist (run: bash ~/Projects/project-bootstrap/install.sh)
   ~/bin must be on PATH (ahead of /usr/bin to avoid conflicts)
@@ -53,6 +67,16 @@ NOTES
 
 EOF
     exit 0
+fi
+
+# ─── Test mode ────────────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--test" ]]; then
+    TEST_MODE=true
+    PROJECT_NAME="mkproj-test-$$"
+    PROJECT_DIR="/tmp/$PROJECT_NAME"
+    REPOS_DIR="/tmp"
+    mkdir -p "$PROJECT_DIR"
+    export STY="mkproj-test"   # suppress screen re-launch
 fi
 
 # ─── Name validation ──────────────────────────────────────────────────────────
@@ -73,18 +97,20 @@ validate_name() {
 }
 
 # ─── Project directory ────────────────────────────────────────────────────────
-if [[ -n "${1:-}" ]]; then
-    validate_name "$1"
-    PROJECT_NAME="$1"
-    PROJECT_DIR="$PWD/$PROJECT_NAME"
-    if [[ ! -d "$PROJECT_DIR" ]]; then
-        mkdir "$PROJECT_DIR"
-        log "Created $PROJECT_DIR"
+if [[ "$TEST_MODE" != "true" ]]; then
+    if [[ -n "${1:-}" ]]; then
+        validate_name "$1"
+        PROJECT_NAME="$1"
+        PROJECT_DIR="$PWD/$PROJECT_NAME"
+        if [[ ! -d "$PROJECT_DIR" ]]; then
+            mkdir "$PROJECT_DIR"
+            log "Created $PROJECT_DIR"
+        fi
+    else
+        PROJECT_DIR="$PWD"
+        PROJECT_NAME="$(basename "$PROJECT_DIR")"
+        validate_name "$PROJECT_NAME"
     fi
-else
-    PROJECT_DIR="$PWD"
-    PROJECT_NAME="$(basename "$PROJECT_DIR")"
-    validate_name "$PROJECT_NAME"
 fi
 
 BARE_REPO="$REPOS_DIR/$PROJECT_NAME.git"
@@ -172,8 +198,13 @@ phase1_preflight() {
     log "  Project : $PROJECT_NAME"
     log "  Dir     : $PROJECT_DIR"
     log "  Bare    : $BARE_REPO"
+    [[ "$TEST_MODE" == "true" ]] && log "  Mode    : TEST (auto-confirmed, will clean up)"
     log ""
-    read -r -p "Proceed with bootstrap? [y/N]: " confirm
+    if [[ "$TEST_MODE" == "true" ]]; then
+        confirm="y"
+    else
+        read -r -p "Proceed with bootstrap? [y/N]: " confirm
+    fi
     [[ "${confirm,,}" == "y" ]] || { err "Aborted."; exit 1; }
 }
 
@@ -562,6 +593,89 @@ phase9_verify() {
     fi
 }
 
+# ─── Test validation ──────────────────────────────────────────────────────────
+phase9_test_validate() {
+    echo ""
+    log "=== Test validation ==="
+    local pass=true
+
+    check() {
+        local label="$1" path="$2" kind="${3:-f}"
+        if [[ "$kind" == "f" && -f "$path" ]]; then
+            log "  PASS  $label"
+        elif [[ "$kind" == "d" && -d "$path" ]]; then
+            log "  PASS  $label"
+        elif [[ "$kind" == "x" && -x "$path" ]]; then
+            log "  PASS  $label"
+        else
+            err "  FAIL  $label  ($path)"
+            pass=false
+        fi
+    }
+
+    # Root files
+    check ".gitignore"          "$PROJECT_DIR/.gitignore"
+    check ".gitattributes"      "$PROJECT_DIR/.gitattributes"
+    check "CLAUDE.md"           "$PROJECT_DIR/CLAUDE.md"
+    check "README.md"           "$PROJECT_DIR/README.md"
+    check "requirements.txt"    "$PROJECT_DIR/requirements.txt"
+    check "run.sh"              "$PROJECT_DIR/run.sh"
+    check "test.sh"             "$PROJECT_DIR/test.sh"
+    check ".env.example"        "$PROJECT_DIR/.env.example"
+
+    # Directories
+    check "src/$PROJECT_NAME/"  "$PROJECT_DIR/src/$PROJECT_NAME" d
+    check "tests/"              "$PROJECT_DIR/tests"             d
+    check "docs/"               "$PROJECT_DIR/docs"              d
+    check "tasks/"              "$PROJECT_DIR/tasks"             d
+    check "responses/"          "$PROJECT_DIR/responses"         d
+    check ".venv/"              "$PROJECT_DIR/.venv"             d
+
+    # Claude config
+    check "settings.json"       "$PROJECT_DIR/.claude/settings.json"
+    check "hooks/ dir"          "$PROJECT_DIR/.claude/hooks"         d
+    check "rules/ dir"          "$PROJECT_DIR/.claude/rules"         d
+
+    # Hooks executable
+    for hook in "$PROJECT_DIR/.claude/hooks/"*.sh; do
+        [[ -e "$hook" ]] || continue
+        check "hook +x $(basename "$hook")" "$hook" x
+    done
+
+    # settings.json valid JSON
+    if jq empty "$PROJECT_DIR/.claude/settings.json" 2>/dev/null; then
+        log "  PASS  settings.json valid JSON"
+    else
+        err "  FAIL  settings.json invalid JSON"
+        pass=false
+    fi
+
+    # tasks stubs
+    check "tasks/todo.md"           "$PROJECT_DIR/tasks/todo.md"
+    check "tasks/skills-manifest.md" "$PROJECT_DIR/tasks/skills-manifest.md"
+
+    # Bare repo has scaffold commit
+    if git -C "$BARE_REPO" log --oneline 2>/dev/null | grep -q "Initial project scaffold"; then
+        log "  PASS  bare repo scaffold commit"
+    else
+        err "  FAIL  bare repo missing scaffold commit"
+        pass=false
+    fi
+
+    echo ""
+    if [[ "$pass" == "true" ]]; then
+        log "All checks passed. Bootstrap is working correctly."
+    else
+        err "One or more checks failed — see above."
+    fi
+
+    echo ""
+    log "Cleaning up test artifacts..."
+    rm -rf "$PROJECT_DIR" "$BARE_REPO"
+    log "  Removed $PROJECT_DIR"
+    log "  Removed $BARE_REPO"
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
     echo ""
@@ -576,7 +690,11 @@ main() {
     phase6_structure
     phase7_global
     phase8_commit
-    phase9_verify
+    if [[ "$TEST_MODE" == "true" ]]; then
+        phase9_test_validate
+    else
+        phase9_verify
+    fi
 }
 
 main "$@"

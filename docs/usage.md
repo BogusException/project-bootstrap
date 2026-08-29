@@ -53,7 +53,7 @@ claude
 ```
 myproject/
 ├── .claude/
-│   ├── hooks/          ← 10 hooks: safety guards, save-response, auto-commit, auto-import-skill
+│   ├── hooks/          ← 11 hooks: safety guards, save-response, auto-commit, auto-import-skill
 │   ├── rules/          ← 4 dotclaude code-quality rules
 │   ├── skills/         ← auto-populated by auto-import-skill hook as skills are used
 │   └── settings.json   ← permissions + full hook wiring
@@ -73,3 +73,24 @@ myproject/
 ├── run.sh              ← activates venv and runs main.py
 └── test.sh             ← activates venv and runs tools/startup_tests.py
 ```
+
+## Testing the bootstrap itself
+
+`mkproj --test` runs all 9 phases against a throw-away directory in `/tmp`, then validates the result and cleans up. No screen session is started, so all output appears directly in the terminal (or in Claude Code's Bash tool output).
+
+```bash
+mkproj --test
+```
+
+This is designed to be run **from inside a Claude Code session**. Claude sees every line of output in real time and can spot and fix failures without you leaving the session.
+
+What it checks after the phases complete:
+
+- Every expected file and directory exists (CLAUDE.md, .gitignore, .venv, hooks, rules, docs, tasks, responses, src/)
+- Every hook script is executable
+- `settings.json` is valid JSON
+- The bare repo contains the "Initial project scaffold" commit
+
+Prints `PASS` or `FAIL` per check, then removes the temp project and bare repo.
+
+Use this any time you edit `bootstrap.sh` or `templates/` to confirm nothing is broken before the next real `mkproj` run.
