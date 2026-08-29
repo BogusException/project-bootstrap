@@ -30,6 +30,20 @@ If `~/Repositories/myproject.git` already exists when you run `proj`, you will b
 
 `q` is the default. Press Enter to abort safely.
 
+## Keeping project-bootstrap itself auto-committed
+
+`watch.sh` monitors the project-bootstrap directory and automatically commits + pushes whenever any file changes. Run it once in its own screen window and leave it:
+
+```bash
+# Install inotify-tools if not present (one-time)
+sudo apt install inotify-tools
+
+# Start the watcher in a dedicated screen window
+screen -S pb-watch bash -c 'cd ~/Projects/project-bootstrap && bash watch.sh'
+```
+
+The commit message is built from the actual changed filenames, e.g. `Update: bootstrap.sh templates/CLAUDE.md`. Multiple rapid changes (like a Claude session writing several files) are debounced into a single commit.
+
 ## After bootstrap completes
 
 ```bash
