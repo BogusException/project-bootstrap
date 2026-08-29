@@ -15,9 +15,9 @@ That's it. A named `screen` session opens, 9 setup phases run, and you land in a
 
 | Category | What's created |
 |----------|---------------|
-| **Version control** | Local git repo + bare remote in `~/Repositories/<name>.git` |
+| **Version control** | Local git repo + bare remote in your configured repos directory |
 | **Python** | `.venv`, `requirements.txt` stub |
-| **Claude Code** | `settings.json`, 10 hooks, 4 code-quality rules |
+| **Claude Code** | `settings.json`, 11 hooks, 4 code-quality rules |
 | **Project structure** | `docs/`, `tasks/`, `responses/`, `run.sh`, `test.sh` |
 | **Standing instructions** | `CLAUDE.md` with git workflow, response format, and behavioural rules |
 | **Shell** | Named `screen` session, auto-venv `cd` override in `~/.bashrc` |
@@ -35,7 +35,7 @@ That's it. A named `screen` session opens, 9 setup phases run, and you land in a
 
 ```bash
 cd ~/Projects
-git clone <repo-url> project-bootstrap
+git clone https://github.com/BogusException/project-bootstrap
 cd project-bootstrap
 bash install.sh
 # Add ~/bin to PATH if prompted, then: source ~/.bashrc
@@ -63,7 +63,7 @@ See [docs/usage.md](docs/usage.md) for the full walkthrough, including what ever
 Bootstrap runs 9 sequential phases inside a `screen` session:
 
 1. **Preflight** — checks prereqs, refuses live projects, handles bare-repo collisions
-2. **Git** — `git init`, bare repo in `~/Repositories/`, remote wired
+2. **Git** — `git init`, bare repo in your configured repos directory, remote wired
 3. **Python** — `.venv` created
 4. **Root files** — `.gitignore`, `.gitattributes`, `.env.example`, `CLAUDE.md`, `README.md`
 5. **Claude config** — hooks, rules, `settings.json`

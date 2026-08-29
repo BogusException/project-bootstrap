@@ -11,6 +11,7 @@ PROJ="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 RESPONSES_DIR="$PROJ/responses"
 
 INPUT=$(cat)
+printf '%s' "$INPUT" > /tmp/stop-hook-input.json
 
 extract_text() {
   # Handles both plain string content and array-of-blocks content

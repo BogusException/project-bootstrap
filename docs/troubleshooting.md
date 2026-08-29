@@ -65,6 +65,29 @@ echo 'export CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN=1' >> ~/.bashrc
 source ~/.bashrc
 ```
 
+## Stop hook fires but `responses/` stays empty
+
+The hook fires (you can verify with `ls /tmp/mkproj-stop-hook-fired`) but the jq query against the transcript returns empty. To capture the raw hook input for diagnosis:
+
+```bash
+# Temporarily add to save-response.sh after `INPUT=$(cat)`:
+printf '%s' "$INPUT" > /tmp/stop-hook-input.json
+```
+
+Then inspect `/tmp/stop-hook-input.json` after the next response to see the actual JSON structure Claude Code is sending.
+
+## Stop hook not firing at all
+
+Hooks defined in `.claude/settings.json` only activate when Claude Code loads the project. If you added `settings.json` mid-session, restart Claude Code. Confirm the hook fires by checking:
+
+```bash
+ls /tmp/mkproj-stop-hook-fired
+```
+
+## `protect-files.sh` asks for confirmation on hook edits
+
+This is expected behavior. Hook scripts now use `ask` (confirmation prompt) instead of `deny` (hard block), so edits to `.claude/hooks/*.sh` require a one-time confirmation rather than being silently rejected.
+
 To follow the most recent response file from a second terminal:
 
 ```bash

@@ -30,6 +30,25 @@ Edit `install.sh` -- change the `LAUNCHER` variable at the top, then re-run it:
 bash ~/Projects/project-bootstrap/install.sh
 ```
 
+## Disabling branch protection for a repo
+
+`block-dangerous-commands.sh` prevents pushes to `main` by default -- appropriate for team projects, but not for single-developer repos.
+
+To disable branch protection in any project:
+
+```bash
+touch .claude/protected-branches   # empty file = no protected branches
+```
+
+To protect specific branches other than `main`/`master`:
+
+```bash
+echo "main" > .claude/protected-branches
+echo "release" >> .claude/protected-branches
+```
+
+The file is read at hook-run time, so changes take effect immediately without restarting Claude Code.
+
 ## Adding dotclaude marketplace hooks
 
 No change needed. Bootstrap copies every `*.sh` it finds in the marketplace hooks directory, so new hooks added upstream are picked up automatically.

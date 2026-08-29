@@ -46,7 +46,7 @@ exec screen -S "$PROJECT_NAME" bash -c "cd '$PROJECT_DIR' && '$BOOTSTRAP_DIR/boo
 | # | Phase | What it does | Idempotent guard |
 |---|-------|-------------|-----------------|
 | 1 | Preflight | Checks Python 3.12+, git, jq; refuses if project has existing work; handles bare-repo collision prompt; asks y/N to proceed | Exits if >1 commit, or 1 commit that is not the scaffold message |
-| 2 | Git | `git init -b main`, bare repo at `~/Repositories/<name>.git`, sets remote origin | Skips if `.git` already exists |
+| 2 | Git | `git init -b main`, bare repo at `$REPOS_ROOT/<name>.git` (configured in `~/.config/mkproj/config`), sets remote origin | Skips if `.git` already exists |
 | 3 | Python | `python3 -m venv .venv`, `requirements.txt` stub | Skips if `.venv` exists |
 | 4 | Root files | Copies `.gitignore`, `.gitattributes`, `.env.example`; writes `CLAUDE.md` and `README.md` with `{{PROJECT_NAME}}` substituted | Skips each file individually if it exists |
 | 5 | Claude config | Copies all `*.sh` from marketplace hooks dir + 3 custom hooks, copies 4 rules, generates `settings.json` | Skips per-file; regenerates settings.json only if absent |
@@ -61,10 +61,10 @@ exec screen -S "$PROJECT_NAME" bash -c "cd '$PROJECT_DIR' && '$BOOTSTRAP_DIR/boo
 
 | Hook | Event | Matcher | Purpose |
 |------|-------|---------|---------|
-| `protect-files.sh` | PreToolUse | Edit\|Write | Blocks writes to protected paths (.env, keys, .git, lock files) |
+| `protect-files.sh` | PreToolUse | Edit\|Write | Blocks writes to sensitive paths (.env, keys, .git, lock files); requires confirmation before editing hook scripts |
 | `warn-large-files.sh` | PreToolUse | Edit\|Write | Blocks writes to build artifacts and large binary dirs |
 | `scan-secrets.sh` | PreToolUse | Edit\|Write | Blocks writes that contain hardcoded credentials |
-| `block-dangerous-commands.sh` | PreToolUse | Bash | Blocks destructive shell commands (rm -rf /, force-push to main, etc.) |
+| `block-dangerous-commands.sh` | PreToolUse | Bash | Blocks destructive shell commands (rm -rf /, force-push, DROP TABLE, etc.); branch protection configurable via `.claude/protected-branches` (empty file = disabled) |
 | `auto-test.sh` | PostToolUse | Edit\|Write | Runs matching test file after source file is edited |
 | `format-on-save.sh` | PostToolUse | Edit\|Write | Auto-formats edited files if a formatter config is present |
 | `session-start.sh` | SessionStart | — | Loads project context fingerprint at session start |
@@ -74,7 +74,7 @@ exec screen -S "$PROJECT_NAME" bash -c "cd '$PROJECT_DIR' && '$BOOTSTRAP_DIR/boo
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| `save-response.sh` | Stop | Saves every query+response to `responses/YYYYMMDD-HHMMSS.txt` |
+| `save-response.sh` | Stop | Saves every query+response to `responses/YYYYMMDD-HHMMSS.txt`; handles both plain-string and array-of-blocks content formats |
 | `auto-commit.sh` | Stop | Safety-net: stages and commits any files Claude left uncommitted |
 | `auto-import-skill.sh` | PostToolUse/Skill | Copies invoked skills from `~/.claude/skills/` into the project's `.claude/skills/` |
 
