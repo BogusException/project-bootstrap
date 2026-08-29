@@ -7,7 +7,7 @@
 - Python 3.12+
 - jq
 - screen
-- `~/bin` in PATH (or any directory on PATH)
+- `~/bin` in PATH (must appear before `/usr/bin` to avoid conflicts)
 
 ## Steps
 
@@ -16,24 +16,27 @@
 cd ~/Projects
 git clone <repo-url> project-bootstrap
 
-# 2. Run the installer (creates ~/bin/proj)
+# 2. Run the one-time installer (creates ~/bin/mkproj)
 cd project-bootstrap
 bash install.sh
 
-# 3. Reload your shell
+# 3. Ensure ~/bin is on PATH — add to ~/.bashrc if not already there
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
 # 4. Verify
-proj --help 2>/dev/null || echo "proj is available"
+mkproj --help
 ```
 
-## If ~/bin is not in PATH
+## If mkproj is not found after install
 
-Add to `~/.bashrc`:
+Check that `~/bin` is on PATH and appears before `/usr/bin`:
 
 ```bash
-export PATH="$HOME/bin:$PATH"
+echo $PATH | tr ':' '\n' | grep -n bin
 ```
+
+`/home/<you>/bin` should appear before `/usr/bin`.
 
 ## Updating
 
@@ -42,4 +45,4 @@ cd ~/Projects/project-bootstrap
 git pull
 ```
 
-The `~/bin/proj` launcher does not need to be re-run after updates — it always executes the current `bootstrap.sh`.
+`~/bin/mkproj` does not need to be re-run after updates — it always calls the current `bootstrap.sh` directly.

@@ -3,59 +3,73 @@
 ## Starting a new project
 
 ```bash
-mkdir ~/Projects/myproject
-cd ~/Projects/myproject
-proj
+cd ~/Projects
+mkproj myproject
 ```
 
-That's it. `proj`:
+`mkproj` accepts the project name as an argument and creates the directory if it does not exist. Name rules: lowercase letters, digits, hyphens, underscores only (`my-tool`, `agent2`, `cambium_temp`).
 
-1. Creates a `screen` session named `myproject`
-2. Runs all 9 bootstrap phases inside it
-3. Drops you into a live bash shell in the named session
+What happens next:
+1. A `screen` session named `myproject` is created
+2. All 9 bootstrap phases run inside it
+3. You land in a live bash shell in that screen session, ready to work
 
 ## Resuming after an interrupted run
 
-If bootstrap fails mid-run (network blip, missing prereq, etc.), fix the issue and run `proj` again from the same directory. All phases are idempotent — existing files and the venv are skipped, only missing pieces are created.
+If bootstrap fails mid-run (network blip, missing prereq, etc.), fix the issue and run `mkproj myproject` again. All phases are idempotent — existing files and the venv are skipped, only missing pieces are created.
+
+The one exception: if the project already has more than one git commit, bootstrap refuses. That means real project work is present and running bootstrap would be a mistake.
 
 ## Existing bare repo collision
 
-If `~/Repositories/myproject.git` already exists when you run `proj`, you will be prompted:
+If `~/Repositories/myproject.git` already exists when you run `mkproj`, you are prompted:
 
 ```
-[d] Delete and recreate
+[d] Delete and recreate fresh
 [o] Keep it, reset remote URL only
 [q] Quit (default)
 ```
 
-`q` is the default. Press Enter to abort safely.
-
-## Keeping project-bootstrap itself auto-committed
-
-`watch.sh` monitors the project-bootstrap directory and automatically commits + pushes whenever any file changes. Run it once in its own screen window and leave it:
-
-```bash
-# Install inotify-tools if not present (one-time)
-sudo apt install inotify-tools
-
-# Start the watcher in a dedicated screen window
-screen -S pb-watch bash -c 'cd ~/Projects/project-bootstrap && bash watch.sh'
-```
-
-The commit message is built from the actual changed filenames, e.g. `Update: bootstrap.sh templates/CLAUDE.md`. Multiple rapid changes (like a Claude session writing several files) are debounced into a single commit.
+Press Enter to abort safely. `d` is the right choice for a completely fresh start.
 
 ## After bootstrap completes
 
 ```bash
-# Activate venv (auto-activated on cd by the ~/.bashrc override)
+# Activate venv (auto-activated on cd if ~/.bashrc override is in place)
 source .venv/bin/activate
 
 # Add dependencies to requirements.txt, then install
 pip install -r requirements.txt
 
-# Copy and fill in .env
+# Copy and fill in API keys
 cp .env.example .env
 
 # Start Claude Code
 claude
+```
+
+## What every new project receives
+
+```
+myproject/
+├── .claude/
+│   ├── hooks/          ← 10 hooks: safety guards, save-response, auto-commit, auto-import-skill
+│   ├── rules/          ← 4 dotclaude code-quality rules
+│   ├── skills/         ← auto-populated by auto-import-skill hook as skills are used
+│   └── settings.json   ← permissions + full hook wiring
+├── .venv/              ← Python virtual environment
+├── docs/               ← 8 stub docs (fill in as the project evolves)
+├── responses/          ← one .txt file per Claude exchange (gitignored content)
+│   └── .gitkeep
+├── tasks/
+│   ├── todo.md         ← project task list
+│   └── skills-manifest.md ← auto-updated by auto-import-skill
+├── .env.example        ← template for API keys (copy to .env, never commit .env)
+├── .gitattributes      ← LF line ending normalisation
+├── .gitignore          ← covers Python, secrets, Claude responses, editor files
+├── CLAUDE.md           ← standing instructions Claude reads every session
+├── README.md           ← project overview stub
+├── requirements.txt    ← Python dependency stub
+├── run.sh              ← activates venv and runs main.py
+└── test.sh             ← activates venv and runs tools/startup_tests.py
 ```
