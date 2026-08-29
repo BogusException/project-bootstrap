@@ -3,6 +3,7 @@
 # Wired as a Stop hook -- fires after every Claude response.
 
 set -uo pipefail
+touch /tmp/mkproj-stop-hook-fired
 
 if ! command -v jq >/dev/null 2>&1; then exit 0; fi
 
