@@ -15,7 +15,7 @@ That's it. A named `screen` session opens, 9 setup phases run, and you land in a
 
 | Category | What's created |
 |----------|---------------|
-| **Version control** | Local git repo + bare remote in your configured repos directory |
+| **Version control** | Local git repo (remotes optional -- add any time; see [docs/adding-remotes.md](docs/adding-remotes.md)) |
 | **Python** | `.venv`, `requirements.txt` stub |
 | **Claude Code** | `settings.json`, 11 hooks, 4 code-quality rules |
 | **Project structure** | `docs/`, `tasks/`, `responses/`, `run.sh`, `test.sh` |
@@ -63,14 +63,14 @@ See [docs/usage.md](docs/usage.md) for the full walkthrough, including what ever
 Bootstrap runs 9 sequential phases inside a `screen` session:
 
 1. **Preflight** — checks prereqs, refuses live projects, handles bare-repo collisions
-2. **Git** — `git init`, bare repo in your configured repos directory, remote wired
+2. **Git** -- `git init` on branch main (remotes optional, configured separately)
 3. **Python** — `.venv` created
 4. **Root files** — `.gitignore`, `.gitattributes`, `.env.example`, `CLAUDE.md`, `README.md`
 5. **Claude config** — hooks, rules, `settings.json`
 6. **Structure** — `docs/`, `tasks/`, `responses/`, `run.sh`, `test.sh`
 7. **Global setup** — `~/.bashrc` entries, global Claude hook (idempotent)
-8. **Initial commit** — "Initial project scaffold" committed and pushed
-9. **Verify** — hook permissions, bare repo confirmation, next-steps summary
+8. **Initial commit** — "Initial project scaffold" committed locally (pushed if a remote exists)
+9. **Verify** — hook permissions, next-steps summary
 
 See [docs/how-it-works.md](docs/how-it-works.md) for internals, hook inventory, and `settings.json` structure.
 
@@ -94,3 +94,5 @@ See [docs/customizing.md](docs/customizing.md).
 | [docs/how-it-works.md](docs/how-it-works.md) | Internals: phases, hooks, settings.json |
 | [docs/customizing.md](docs/customizing.md) | Modifying templates and phases |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common problems and fixes |
+| [docs/adding-remotes.md](docs/adding-remotes.md) | Setting up local bare repo, GitHub, and other remotes |
+| [docs/doc-index.md](docs/doc-index.md) | Alphabetical index of all topics |

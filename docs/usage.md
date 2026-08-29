@@ -1,6 +1,6 @@
 # Usage
 
-## Starting a new project
+## 1. Starting a new project
 
 ```bash
 cd ~/Projects
@@ -14,25 +14,13 @@ What happens next:
 2. All 9 bootstrap phases run inside it
 3. You land in a live bash shell in that screen session, ready to work
 
-## Resuming after an interrupted run
+## 2. Resuming after an interrupted run
 
-If bootstrap fails mid-run (network blip, missing prereq, etc.), fix the issue and run `mkproj myproject` again. All phases are idempotent — existing files and the venv are skipped, only missing pieces are created.
+If bootstrap fails mid-run (network blip, missing prereq, etc.), fix the issue and run `mkproj myproject` again. All phases are idempotent -- existing files and the venv are skipped, only missing pieces are created.
 
 The one exception: if the project already has more than one git commit, bootstrap refuses. That means real project work is present and running bootstrap would be a mistake.
 
-## Existing bare repo collision
-
-If `~/Repositories/myproject.git` already exists when you run `mkproj`, you are prompted:
-
-```
-[d] Delete and recreate fresh
-[o] Keep it, reset remote URL only
-[q] Quit (default)
-```
-
-Press Enter to abort safely. `d` is the right choice for a completely fresh start.
-
-## After bootstrap completes
+## 3. After bootstrap completes
 
 ```bash
 # Activate venv (auto-activated on cd if ~/.bashrc override is in place)
@@ -48,7 +36,11 @@ cp .env.example .env
 claude
 ```
 
-## What every new project receives
+## 4. Adding git remotes
+
+Bootstrap creates a local git repo only. To push to GitHub, a local bare repo, or another host, see [adding-remotes.md](adding-remotes.md). Remotes are optional and can be added any time after bootstrap.
+
+## 5. What every new project receives
 
 ```
 myproject/
@@ -74,7 +66,7 @@ myproject/
 └── test.sh             ← activates venv and runs tools/startup_tests.py
 ```
 
-## Testing the bootstrap itself
+## 6. Testing the bootstrap itself
 
 `mkproj --test` runs all 9 phases against a throw-away directory in `/tmp`, then validates the result and cleans up. No screen session is started, so all output appears directly in the terminal (or in Claude Code's Bash tool output).
 
@@ -89,8 +81,7 @@ What it checks after the phases complete:
 - Every expected file and directory exists (CLAUDE.md, .gitignore, .venv, hooks, rules, docs, tasks, responses, src/)
 - Every hook script is executable
 - `settings.json` is valid JSON
-- The bare repo contains the "Initial project scaffold" commit
 
-Prints `PASS` or `FAIL` per check, then removes the temp project and bare repo.
+Prints `PASS` or `FAIL` per check, then removes the temp project.
 
 Use this any time you edit `bootstrap.sh` or `templates/` to confirm nothing is broken before the next real `mkproj` run.

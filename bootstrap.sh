@@ -7,8 +7,6 @@ BOOTSTRAP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="$BOOTSTRAP_DIR/templates"
 MARKETPLACE_HOOKS="$HOME/.claude/plugins/marketplaces/dotclaude/hooks"
 MARKETPLACE_RULES="$HOME/.claude/plugins/marketplaces/dotclaude/rules"
-REPOS_DIR="$HOME/Repositories"
-BARE_REPO_KEEP=false
 TEST_MODE=false
 
 # ─── Colours ──────────────────────────────────────────────────────────────────
@@ -74,7 +72,6 @@ if [[ "${1:-}" == "--test" ]]; then
     TEST_MODE=true
     PROJECT_NAME="mkproj-test-$$"
     PROJECT_DIR="/tmp/$PROJECT_NAME"
-    REPOS_DIR="/tmp"
     mkdir -p "$PROJECT_DIR"
     export STY="mkproj-test"   # suppress screen re-launch
 fi
@@ -112,8 +109,6 @@ if [[ "$TEST_MODE" != "true" ]]; then
         validate_name "$PROJECT_NAME"
     fi
 fi
-
-BARE_REPO="$REPOS_DIR/$PROJECT_NAME.git"
 
 # ─── Screen ───────────────────────────────────────────────────────────────────
 if [[ -z "${STY:-}" ]]; then
@@ -162,42 +157,9 @@ phase1_preflight() {
         fi
     fi
 
-    # Existing bare repo collision
-    if [[ -d "$BARE_REPO" ]]; then
-        warn ""
-        warn "Bare repo already exists: $BARE_REPO"
-        warn ""
-        printf "  [d] Delete it and recreate fresh\n"
-        printf "  [o] Keep it, reset remote URL only\n"
-        printf "  [q] Quit (default)\n"
-        printf "\n"
-        read -r -p "Choice [d/o/q]: " choice
-        case "${choice,,}" in
-            d)
-                warn "Deleting $BARE_REPO ..."
-                rm -rf "$BARE_REPO"
-                ;;
-            o)
-                warn "Keeping existing bare repo; will reset remote URL."
-                BARE_REPO_KEEP=true
-                ;;
-            *)
-                err "Aborted."
-                exit 1
-                ;;
-        esac
-    fi
-
-    # ~/Repositories/ check
-    if [[ ! -d "$REPOS_DIR" ]]; then
-        warn "$REPOS_DIR does not exist — creating it."
-        mkdir -p "$REPOS_DIR"
-    fi
-
     log ""
     log "  Project : $PROJECT_NAME"
     log "  Dir     : $PROJECT_DIR"
-    log "  Bare    : $BARE_REPO"
     [[ "$TEST_MODE" == "true" ]] && log "  Mode    : TEST (auto-confirmed, will clean up)"
     log ""
     if [[ "$TEST_MODE" == "true" ]]; then
@@ -219,19 +181,7 @@ phase2_git() {
     else
         log "  .git exists — skipping init"
     fi
-
-    if [[ "$BARE_REPO_KEEP" != "true" ]]; then
-        git init --bare -q "$BARE_REPO"
-        log "  Created bare repo: $BARE_REPO"
-    fi
-
-    if git -C "$PROJECT_DIR" remote get-url origin &>/dev/null 2>&1; then
-        git -C "$PROJECT_DIR" remote set-url origin "$BARE_REPO"
-        log "  Updated remote origin → $BARE_REPO"
-    else
-        git -C "$PROJECT_DIR" remote add origin "$BARE_REPO"
-        log "  Added remote origin → $BARE_REPO"
-    fi
+    log "  No remote configured — add one later (see docs/adding-remotes.md)"
 }
 
 # ─── Phase 3: Python ──────────────────────────────────────────────────────────
@@ -454,6 +404,22 @@ EOF
 phase6_structure() {
     log "=== Phase 6: Project structure ==="
 
+    # src/<name>/ and tests/
+    if [[ ! -d "$PROJECT_DIR/src/$PROJECT_NAME" ]]; then
+        mkdir -p "$PROJECT_DIR/src/$PROJECT_NAME"
+        touch "$PROJECT_DIR/src/$PROJECT_NAME/__init__.py"
+        log "  created src/$PROJECT_NAME/"
+    else
+        log "  src/$PROJECT_NAME/ exists — skipping"
+    fi
+    if [[ ! -d "$PROJECT_DIR/tests" ]]; then
+        mkdir -p "$PROJECT_DIR/tests"
+        touch "$PROJECT_DIR/tests/.gitkeep"
+        log "  created tests/"
+    else
+        log "  tests/ exists — skipping"
+    fi
+
     # responses/ — git tracks the dir but never the content
     mkdir -p "$PROJECT_DIR/responses"
     if [[ ! -f "$PROJECT_DIR/responses/.gitkeep" ]]; then
@@ -551,8 +517,13 @@ phase8_commit() {
 
     git -C "$PROJECT_DIR" add -A
     git -C "$PROJECT_DIR" commit -q -m "Initial project scaffold"
-    git -C "$PROJECT_DIR" push -u origin main -q
-    log "  committed and pushed to $BARE_REPO"
+    log "  committed locally"
+    if git -C "$PROJECT_DIR" remote get-url origin &>/dev/null 2>&1; then
+        git -C "$PROJECT_DIR" push -u origin main -q
+        log "  pushed to $(git -C "$PROJECT_DIR" remote get-url origin)"
+    else
+        log "  no remote configured — skipping push (see docs/adding-remotes.md)"
+    fi
 }
 
 # ─── Phase 9: Verify ──────────────────────────────────────────────────────────
@@ -570,27 +541,15 @@ phase9_verify() {
     done < <(find "$PROJECT_DIR/.claude/hooks" -type f -name "*.sh" -print0 2>/dev/null)
     log "  All hooks executable"
 
-    # Bare repo must have the scaffold commit
-    if git -C "$BARE_REPO" log --oneline 2>/dev/null | grep -q "Initial project scaffold"; then
-        log "  Bare repo: initial commit confirmed"
-    else
-        warn "  Initial commit not found in bare repo"
-        ok=false
-    fi
-
     echo ""
-    if [[ "$ok" == "true" ]]; then
-        log "Bootstrap complete. $PROJECT_NAME is ready."
-        echo ""
-        log "Next steps:"
-        log "  1. Edit requirements.txt"
-        log "     source .venv/bin/activate && pip install -r requirements.txt"
-        log "  2. Copy .env.example → .env and fill in API keys"
-        log "  3. Update CLAUDE.md with project-specific commands"
-        log "  4. Start coding: claude"
-    else
-        warn "Bootstrap finished with warnings — see above."
-    fi
+    log "Bootstrap complete. $PROJECT_NAME is ready."
+    echo ""
+    log "Next steps:"
+    log "  1. Edit requirements.txt"
+    log "     source .venv/bin/activate && pip install -r requirements.txt"
+    log "  2. Copy .env.example → .env and fill in API keys"
+    log "  3. Add a git remote when ready (see docs/adding-remotes.md)"
+    log "  4. Start coding: claude"
 }
 
 # ─── Test validation ──────────────────────────────────────────────────────────
@@ -654,11 +613,11 @@ phase9_test_validate() {
     check "tasks/todo.md"           "$PROJECT_DIR/tasks/todo.md"
     check "tasks/skills-manifest.md" "$PROJECT_DIR/tasks/skills-manifest.md"
 
-    # Bare repo has scaffold commit
-    if git -C "$BARE_REPO" log --oneline 2>/dev/null | grep -q "Initial project scaffold"; then
-        log "  PASS  bare repo scaffold commit"
+    # Local repo has scaffold commit
+    if git -C "$PROJECT_DIR" log --oneline 2>/dev/null | grep -q "Initial project scaffold"; then
+        log "  PASS  local repo scaffold commit"
     else
-        err "  FAIL  bare repo missing scaffold commit"
+        err "  FAIL  local repo missing scaffold commit"
         pass=false
     fi
 
@@ -671,9 +630,8 @@ phase9_test_validate() {
 
     echo ""
     log "Cleaning up test artifacts..."
-    rm -rf "$PROJECT_DIR" "$BARE_REPO"
+    rm -rf "$PROJECT_DIR"
     log "  Removed $PROJECT_DIR"
-    log "  Removed $BARE_REPO"
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Install
 
-## Requirements
+## 1. Requirements
 
 - bash
 - git
@@ -9,18 +9,18 @@
 - screen
 - `~/bin` in PATH (must appear before `/usr/bin` to avoid conflicts)
 
-## Steps
+## 2. Steps
 
 ```bash
 # 1. Clone to ~/Projects/
 cd ~/Projects
-git clone <repo-url> project-bootstrap
+git clone https://github.com/BogusException/project-bootstrap
 
 # 2. Run the one-time installer (creates ~/bin/mkproj)
 cd project-bootstrap
 bash install.sh
 
-# 3. Ensure ~/bin is on PATH — add to ~/.bashrc if not already there
+# 3. Ensure ~/bin is on PATH -- add to ~/.bashrc if not already there
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
@@ -28,7 +28,7 @@ source ~/.bashrc
 mkproj --help
 ```
 
-## If mkproj is not found after install
+## 3. If mkproj is not found after install
 
 Check that `~/bin` is on PATH and appears before `/usr/bin`:
 
@@ -38,11 +38,11 @@ echo $PATH | tr ':' '\n' | grep -n bin
 
 `/home/<you>/bin` should appear before `/usr/bin`.
 
-## Updating
+## 4. Updating
 
 ```bash
 cd ~/Projects/project-bootstrap
 git pull
 ```
 
-`~/bin/mkproj` does not need to be re-run after updates — it always calls the current `bootstrap.sh` directly.
+`~/bin/mkproj` does not need to be re-run after updates -- it always calls the current `bootstrap.sh` directly.
