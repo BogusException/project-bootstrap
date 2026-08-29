@@ -11,13 +11,23 @@ RESPONSES_DIR="$PROJ/responses"
 
 INPUT=$(cat)
 
-QUERY=$(printf '%s' "$INPUT" | jq -r '
-  [.transcript[] | select(.role == "user")] | last | .content // empty
-' 2>/dev/null)
+extract_text() {
+  # Handles both plain string content and array-of-blocks content
+  jq -r '
+    if type == "string" then .
+    elif type == "array" then [.[] | select(.type == "text") | .text] | join("\n")
+    else empty
+    end
+  ' 2>/dev/null
+}
 
-RESPONSE=$(printf '%s' "$INPUT" | jq -r '
+QUERY=$(printf '%s' "$INPUT" | jq -c '
+  [.transcript[] | select(.role == "user")] | last | .content // empty
+' 2>/dev/null | extract_text)
+
+RESPONSE=$(printf '%s' "$INPUT" | jq -c '
   [.transcript[] | select(.role == "assistant")] | last | .content // empty
-' 2>/dev/null)
+' 2>/dev/null | extract_text)
 
 [ -z "$RESPONSE" ] && exit 0
 
