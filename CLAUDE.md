@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Response format (required on every response)
+
+**First character:** Begin every response with a single ✓ character followed by a newline, then the response body. This is a health indicator -- when the user stops seeing ✓, Claude Code has lost its instruction context.
+
+**Last lines:** End every response with:
+
+```
+---
+Saved to responses/YYYYMMDD-hhmmss.txt via Stop hook.
+```
+
+Use the actual current timestamp. The `save-response.sh` Stop hook writes the file after each exchange. The file contains only the human-readable query and response (not tool output), in this format:
+
+```
+=== QUERY ===
+<user message>
+
+=== RESPONSE ===
+<Claude response>
+```
+
+**Git commits:** At the end of any response where files were added, changed, or deleted, commit explicitly:
+
+```bash
+git add <specific changed files>
+git commit -m "descriptive message stating what changed and why"
+git push origin main
+```
+
+The `auto-commit.sh` Stop hook is a safety net only -- Claude commits first with a meaningful message.
+
 ## Purpose
 
 This repo provides `bootstrap.sh` -- a bash script that scaffolds a complete Claude Code Python project from an empty directory. Run via `proj` (a thin launcher in `~/bin/`). All logic lives here so changes are version-controlled and take effect immediately on the next `proj` run.
