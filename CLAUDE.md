@@ -6,14 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **First character:** Begin every response with a single ✓ character followed by a newline, then the response body. This is a health indicator -- when the user stops seeing ✓, Claude Code has lost its instruction context.
 
-**Last lines:** End every response with:
+**Second line:** Immediately after the ✓, read `responses/.last-saved` and report the actual filename saved by the previous Stop hook:
 
 ```
----
-Saved to responses/YYYYMMDD-hhmmss.txt via Stop hook.
+✓
+Last saved: responses/20260828-214500.txt
 ```
 
-Use the actual current timestamp. The `save-response.sh` Stop hook writes the file after each exchange. The file contains only the human-readable query and response (not tool output), in this format:
+If `responses/.last-saved` does not exist or is empty, write `Last saved: (none yet)`.
+
+This is real confirmation -- the file is written by `save-response.sh` after each exchange and contains the human-readable query and response (not tool output):
 
 ```
 === QUERY ===

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Saves the last user query + Claude's response to responses/YYYYMMDD-HHMMSS.txt
-# Wired as a Stop hook -- fires after every Claude response.
+# Wired as a Stop hook. Input JSON has:
+#   last_assistant_message  plain string -- the response text
+#   transcript_path         path to JSONL with full conversation
 
 set -uo pipefail
 
@@ -8,39 +10,55 @@ if ! command -v jq >/dev/null 2>&1; then exit 0; fi
 
 PROJ="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 RESPONSES_DIR="$PROJ/responses"
+LAST_SAVED="$PROJ/responses/.last-saved"
 
 INPUT=$(cat)
 
-extract_text() {
-  # Handles both plain string content and array-of-blocks content
-  jq -r '
-    if type == "string" then .
-    elif type == "array" then [.[] | select(.type == "text") | .text] | join("\n")
-    else empty
-    end
-  ' 2>/dev/null
-}
-
-QUERY=$(printf '%s' "$INPUT" | jq -c '
-  [.transcript[] | select(.role == "user")] | last | .content // empty
-' 2>/dev/null | extract_text)
-
-RESPONSE=$(printf '%s' "$INPUT" | jq -c '
-  [.transcript[] | select(.role == "assistant")] | last | .content // empty
-' 2>/dev/null | extract_text)
-
+RESPONSE=$(printf '%s' "$INPUT" | jq -r '.last_assistant_message // empty' 2>/dev/null)
 [ -z "$RESPONSE" ] && exit 0
 
-mkdir -p "$RESPONSES_DIR"
+TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null)
 
+QUERY=""
+if [ -f "$TRANSCRIPT" ]; then
+  QUERY=$(python3 - "$TRANSCRIPT" <<'PY'
+import sys, json
+
+path = sys.argv[1]
+last_text = ""
+with open(path) as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except Exception:
+            continue
+        msg = entry.get("message", {})
+        if msg.get("role") != "user":
+            continue
+        content = msg.get("content", [])
+        if not isinstance(content, list):
+            continue
+        texts = [b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip()]
+        if texts:
+            last_text = "\n".join(texts)
+print(last_text)
+PY
+  )
+fi
+
+mkdir -p "$RESPONSES_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 FILE="$RESPONSES_DIR/${TIMESTAMP}.txt"
 
 {
   if [ -n "$QUERY" ]; then
-    printf '=== QUERY ===\n'
-    printf '%s\n' "$QUERY"
-    printf '\n=== RESPONSE ===\n'
+    printf '=== QUERY ===\n%s\n\n=== RESPONSE ===\n' "$QUERY"
   fi
   printf '%s\n' "$RESPONSE"
 } > "$FILE"
+
+# Record filename so next response can confirm it
+printf '%s\n' "$FILE" > "$LAST_SAVED"
